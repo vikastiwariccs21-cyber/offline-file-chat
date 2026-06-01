@@ -16,7 +16,7 @@ const CONFIG = {
 };
 
 let appState = {
-    files: new Map(), // file_id -> { filename, size, content_preview }
+    files: new Map(), // file_id -> file metadata and analysis
     selectedFiles: new Set(), // Set of selected file_ids
     conversationHistory: [],
     isLoading: false,
@@ -184,11 +184,15 @@ async function uploadFile(file) {
             size: data.size,
             file_id: data.file_id,
             extracted_chars: data.extracted_chars,
+            extracted_text: data.extracted_text || "",
+            keyword_analysis: data.keyword_analysis || null,
+            document_analysis: data.document_analysis || null,
         });
 
         // Update UI
         renderFilesList();
         addSystemMessage(`✅ Uploaded: ${data.filename} (${data.extracted_chars} characters)`);
+        showFileAnalysisInChat(appState.files.get(data.file_id), "Upload Analysis");
         hideUploadStatus();
     } catch (error) {
         console.error("File upload error:", error);
@@ -264,6 +268,10 @@ function toggleFileSelection(file_id) {
         appState.selectedFiles.delete(file_id);
     } else {
         appState.selectedFiles.add(file_id);
+        const selectedFile = appState.files.get(file_id);
+        if (selectedFile) {
+            showFileAnalysisInChat(selectedFile, "Selected File Preview");
+        }
     }
     renderFilesList();
 }
@@ -475,6 +483,38 @@ function addSystemMessage(content) {
 
     elements.chatMessages.appendChild(messageDiv);
     scrollToBottom();
+}
+
+function showFileAnalysisInChat(fileData, title = "File Analysis") {
+    if (!fileData) return;
+
+    const structure = fileData.document_analysis;
+    const keywords = fileData.keyword_analysis?.keywords || [];
+    const preview = fileData.extracted_text ? escapeHtml(fileData.extracted_text.slice(0, 250)) : "";
+
+    let html = `<div><strong>${escapeHtml(title)}</strong>: ${escapeHtml(fileData.filename)}</div>`;
+
+    if (structure) {
+        html += `<div>📊 Pages: ${structure.page_count}, Paragraphs: ${structure.paragraph_count}, Sentences: ${structure.sentence_count}, Avg sentence length: ${structure.avg_sentence_length}</div>`;
+    }
+
+    if (keywords.length > 0) {
+        const keywordItems = keywords
+            .map((item) => `<li>${escapeHtml(item.word)} (${item.frequency})</li>`)
+            .join("");
+        html += `
+            <details>
+                <summary>🔑 Extracted keywords (${fileData.keyword_analysis.keyword_count})</summary>
+                <ul>${keywordItems}</ul>
+            </details>
+        `;
+    }
+
+    if (preview) {
+        html += `<div>🔍 Preview: ${preview}...</div>`;
+    }
+
+    addSystemMessage(html);
 }
 
 /**

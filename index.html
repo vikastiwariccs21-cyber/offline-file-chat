@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline File Chat - Local LLM</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar: File Management -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>File Chat</h2>
+                <p class="sidebar-subtitle">Local LLM Powered</p>
+            </div>
+
+            <!-- File Upload Zone -->
+            <div class="upload-zone" id="uploadZone">
+                <div class="upload-icon">📁</div>
+                <p class="upload-text">Drop files here or click to upload</p>
+                <input 
+                    type="file" 
+                    id="fileInput" 
+                    accept=".pdf,.txt,.docx,.csv" 
+                    hidden
+                    multiple
+                >
+            </div>
+
+            <!-- Upload Status -->
+            <div class="upload-status" id="uploadStatus" style="display: none;">
+                <div class="spinner"></div>
+                <p id="uploadStatusText">Processing file...</p>
+            </div>
+
+            <!-- Uploaded Files List -->
+            <div class="files-list">
+                <h3 class="files-title">Uploaded Files</h3>
+                <div class="files-container" id="filesContainer">
+                    <p class="empty-state">No files uploaded yet</p>
+                </div>
+            </div>
+
+            <!-- Session Controls -->
+            <div class="session-controls">
+                <button class="btn btn-secondary" id="clearSessionBtn">
+                    Clear Session
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content: Chat Interface -->
+        <main class="chat-container">
+            <div class="chat-header">
+                <h1>Chat with Your Files</h1>
+                <p class="chat-subtitle">Query documents using local LLM</p>
+            </div>
+
+            <!-- Chat Messages Area -->
+            <div class="chat-messages" id="chatMessages">
+                <div class="welcome-message">
+                    <h2>Welcome to Offline File Chat</h2>
+                    <p>Upload documents (PDF, TXT, DOCX, CSV) and start asking questions.</p>
+                    <p class="info-text">💡 All processing happens locally on your machine.</p>
+                </div>
+            </div>
+
+            <!-- Chat Input Area -->
+            <div class="chat-input-area">
+                <div class="input-group">
+                    <textarea
+                        id="chatInput"
+                        class="chat-textarea"
+                        placeholder="Ask me anything about your files..."
+                        rows="3"
+                    ></textarea>
+                    <button class="btn btn-primary" id="sendBtn">
+                        <span>Send</span>
+                        <span class="send-icon">→</span>
+                    </button>
+                </div>
+                <div class="input-help">
+                    <p>Press Shift+Enter for new line, or just press Enter to send</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="app.js"></script>
+</body>
+</html>

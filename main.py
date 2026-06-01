@@ -7,7 +7,9 @@ import os
 import json
 import uuid
 import asyncio
-from typing import Optional, Dict, List
+import re
+from collections import Counter
+from typing import Optional, Dict, List, Any
 from datetime import datetime
 from pathlib import Path
 
@@ -90,6 +92,9 @@ class FileUploadResponse(BaseModel):
     size: int
     status: str
     extracted_chars: int
+    extracted_text: str
+    keyword_analysis: Optional[Dict[str, Any]] = None
+    document_analysis: Optional[Dict[str, Any]] = None
 
 
 # ============================================================================
@@ -171,6 +176,50 @@ async def extract_text_from_file(filename: str, file_content: bytes) -> str:
             raise ValueError(f"Unsupported file type: {filename_lower}")
 
 
+def extract_keywords_from_text(text: str) -> Dict[str, Any]:
+    """Extract important keywords and frequency from text."""
+    words = re.findall(r"\b[a-zA-Z]{3,}\b", text.lower())
+    stop_words = {
+        "the", "and", "for", "with", "this", "that", "from", "are", "was", "were",
+        "have", "has", "had", "into", "about", "your", "their", "been", "will", "shall",
+        "can", "could", "would", "should", "there", "here", "when", "where", "which", "while",
+        "page"
+    }
+    filtered_words = [word for word in words if word not in stop_words]
+    keyword_counts = Counter(filtered_words).most_common(15)
+    keywords = [{"word": word, "frequency": frequency} for word, frequency in keyword_counts]
+    return {
+        "keywords": keywords,
+        "keyword_count": len(keywords)
+    }
+
+
+def analyze_document_structure(text: str) -> Dict[str, Any]:
+    """Analyze pages, paragraphs, sentences and sentence length."""
+    page_markers = re.findall(r"--- Page \d+ ---", text)
+    page_count = len(page_markers) if page_markers else (1 if text.strip() else 0)
+
+    stripped_text = text.strip()
+    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", stripped_text) if p.strip()]
+    paragraph_count = len(paragraphs)
+
+    sentence_candidates = [s.strip() for s in re.split(r"[.!?]+", stripped_text) if s.strip()]
+    sentence_count = len(sentence_candidates)
+
+    if sentence_count > 0:
+        total_words = sum(len(sentence.split()) for sentence in sentence_candidates)
+        avg_sentence_length = round(total_words / sentence_count, 2)
+    else:
+        avg_sentence_length = 0.0
+
+    return {
+        "page_count": page_count,
+        "paragraph_count": paragraph_count,
+        "sentence_count": sentence_count,
+        "avg_sentence_length": avg_sentence_length,
+    }
+
+
 # ============================================================================
 # ENDPOINTS
 # ============================================================================
@@ -190,6 +239,9 @@ async def upload_file(file: UploadFile = File(...)):
         
         # Extract text based on file type
         extracted_text = await extract_text_from_file(file.filename, content)
+        is_pdf = file.filename.lower().endswith(".pdf")
+        keyword_analysis = extract_keywords_from_text(extracted_text) if is_pdf else None
+        document_analysis = analyze_document_structure(extracted_text) if is_pdf else None
         
         # Generate unique file ID
         file_id = str(uuid.uuid4())
@@ -212,7 +264,10 @@ async def upload_file(file: UploadFile = File(...)):
             filename=file.filename,
             size=len(content),
             status="success",
-            extracted_chars=len(extracted_text)
+            extracted_chars=len(extracted_text),
+            extracted_text=extracted_text[:1000],
+            keyword_analysis=keyword_analysis,
+            document_analysis=document_analysis
         )
     
     except Exception as e:
